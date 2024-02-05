@@ -27,12 +27,15 @@ function process_QE_output(QE_output_string; computation="scf")
 		`echo $QE_output_string`,
 		`sed -n 's/.*PWSCF.[^0-9]*\(.*\) CPU.[^0-9]*\(.*\) WALL$/\2/p'`), String)
 	# Extract minutes and seconds.
-	matched = match(r"(?:(\d+)h)?(\d+)m(\d+\.\d+)s", wall_time_str)
-	minutes = parse(Int, matched.captures[2])
+	matched = match(r"(?:(\d+)h)?(?:(\d+)m)?(\d+\.\d+)s", wall_time_str)
 	seconds = parse(Float64, matched.captures[3])
 	if matched.captures[1] !== nothing
 		hours = parse(Int, matched.captures[1])
 	else hours = 0
+	end
+	if matched.captures[2] !== nothing
+		minutes = parse(Int, matched.captures[2])
+	else minutes = 0
 	end
 	wall_time = 60 * 60 * hours + 60 * minutes  + seconds
 

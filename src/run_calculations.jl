@@ -1,27 +1,13 @@
-using DFTK
-using AtomsCalculators
 using Unitful
 using UnitfulAtomic
-using OptimizationOptimJL
-using LazyArtifacts
-using AtomsIO
-using AtomsIOPython
 
-using GeometryOptimization
-using LineSearches
-
-Si_QE_input_path = joinpath(@__DIR__, "test.in")
-Si_psp_path = joinpath(@__DIR__, artifact"pd_nc_sr_lda_standard_0.4.1_upf/Si.upf")
-
-kgrid = [6, 6, 6]
-Ecut = 60.0u"Ry"
 
 """ Build a DFTK computation (system and calculator) from a 
 QuantumEspresso input file.
 """
-function build_computation_from_QE(QE_input_path, psp_path; temperature=1e-4)
+function build_computation_from_QE(QE_input_path, atom_symbol, psp_path; temperature=1e-4)
 	system = load_system(QE_input_path)
-	system = attach_psp(system; Dict(symbol => psp_path))
+	system = attach_psp(system, Dict(atom_symbol => psp_path))
 	
 	if functional == "lda"
 		model_kwargs = (; functionals = [:lda_x, :lda_c_pw], temperature)
@@ -55,12 +41,13 @@ end
 """ Run a QuantumEspresso computation from a given input file, 
 attaching the specified pseudopotential. 
 """
-function run_QE(QE_input_path, psp_path, k_points, Ecut)
+function run_QE(QE_input_path, psp_path; k_points, Ecut::Unitful.Energy)
+	Ecut = uconvert(u"Ry", Ecut).val
 	psp_folder, psp_filename = splitdir(psp_path)
 	# Inject correct values for psp and paths. Also inject Ecut and kpoints.
 	regex_psp = """s@\\(.*pseudo_dir = \\)\\(.*\\)\$@\\1"$(psp_folder)"/@g"""
 	
-	regex_kpoints = """s/.*(K_POINTS.*\\n.[^0-9])([0-9]*) ([0-9]*) ([0-9]*)(.*)/\\1 $(k_points[1]) $(k_points[2]) $(k_points[3])\\5/g"""
+	regex_kpoints = """s/.*(K_POINTS.*\\n.[^0-9]*)([0-9]*) ([0-9]*) ([0-9]*)(.*)\$/\\1 $(k_points[1]) $(k_points[2]) $(k_points[3])\\5/g"""
 	
 	regex_Ecut = """s/(.*ecutwfc.[^0-9]*)(.*)/\\1 $Ecut/g"""
 	
