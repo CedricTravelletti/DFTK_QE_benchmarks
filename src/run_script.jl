@@ -52,12 +52,30 @@ function run_DFTK_vc_relax(system, calculator)
         (; results, calculator.state)
 end
 
-function run_QE(QE_input_path, psp_path)
+""" Run a QuantumEspresso computation from a given input file, 
+attaching the specified pseudopotential. 
+"""
+function run_QE(QE_input_path, psp_path, k_points, Ecut)
 	psp_folder, psp_filename = splitdir(psp_path)
-	# Inject correct values for psp and paths.
-	sed_regex = """s@\\(.*pseudo_dir = \\)\\(.*\\)\$@\\1"$(psp_folder)"/@g"""
-	input_stream = read(pipeline(
-		`sed -e "$sed_regex" $QE_input_path`,
-		`perl -0777 -pe "s/.*(ATOMIC_SPECIES.*\n.[^0-9]*[0-9]*\.[0-9]*)(.*)/\1 $psp_filename/g"`), String)
+	# Inject correct values for psp and paths. Also inject Ecut and kpoints.
+	regex_psp = """s@\\(.*pseudo_dir = \\)\\(.*\\)\$@\\1"$(psp_folder)"/@g"""
+	
+	regex_kpoints = """s/.*(K_POINTS.*\\n.[^0-9])([0-9]*) ([0-9]*) ([0-9]*)(.*)/\\1 $(k_points[1]) $(k_points[2]) $(k_points[3])\\5/g"""
+	
+	regex_Ecut = """s/(.*ecutwfc.[^0-9]*)(.*)/\\1 $Ecut/g"""
+	
+	sed_regex_Ecut = """s@\\(.*pseudo_dir = \\)\\(.*\\)\$@\\1"$(psp_folder)"/@g"""
+	input_stream = read(
+		pipeline(
+		pipeline(
+		pipeline(
+		`sed -e "$regex_psp" $QE_input_path`,
+		`perl -0777 -pe "s/.*(ATOMIC_SPECIES.*\n.[^0-9]*[0-9]*\.[0-9]*)(.*)/\1 $psp_filename/g"`
+		),
+		`perl -0777 -pe "$regex_kpoints"`
+		),
+		`perl -0777 -pe "$regex_Ecut"`
+		),
+		String)
 	read(pipeline(`echo $input_stream`, `pw.x`), String)
 end
