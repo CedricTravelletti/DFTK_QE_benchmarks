@@ -51,8 +51,8 @@ end
 """ Run a QuantumEspresso computation from a given input file, 
 attaching the specified pseudopotential. 
 """
-function run_QE(QE_input_path, psp_path; kgrid, Ecut::Unitful.Energy)
-	Ecut = uconvert(u"Ry", Ecut).val
+function run_QE(QE_input_path, psp_path; kgrid, Ecut::Unitful.Energy, output_file=nothing)
+	Ecut = ustrip(u"Ry", Ecut)
 	psp_folder, psp_filename = splitdir(psp_path)
 	# Inject correct values for psp and paths. Also inject Ecut and kpoints.
 	regex_psp = """s@\\(.*pseudo_dir = \\)\\(.*\\)\$@\\1"$(psp_folder)"/@g"""
@@ -61,7 +61,6 @@ function run_QE(QE_input_path, psp_path; kgrid, Ecut::Unitful.Energy)
 	
 	regex_Ecut = """s/(.*ecutwfc.[^0-9]*)(.*)/\\1 $Ecut/g"""
 	
-	sed_regex_Ecut = """s@\\(.*pseudo_dir = \\)\\(.*\\)\$@\\1"$(psp_folder)"/@g"""
 	input_stream = read(
 		pipeline(
 		pipeline(
@@ -74,5 +73,9 @@ function run_QE(QE_input_path, psp_path; kgrid, Ecut::Unitful.Energy)
 		`perl -0777 -pe "$regex_Ecut"`
 		),
 		String)
-	read(pipeline(`echo $input_stream`, `pw.x`), String)
+	output_stream = read(pipeline(`echo $input_stream`, `pw.x`), String)
+	if !isnothing(output_file)
+		run(`echo $output_stream > $output_file`)
+	end
+	output_stream
 end
