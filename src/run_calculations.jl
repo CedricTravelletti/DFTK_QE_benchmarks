@@ -1,3 +1,8 @@
+using DFTK
+using AtomsCalculators
+using AtomsIO
+using AtomsIOPython
+using AtomsBase
 using Unitful
 using UnitfulAtomic
 
@@ -5,8 +10,11 @@ using UnitfulAtomic
 """ Build a DFTK computation (system and calculator) from a 
 QuantumEspresso input file.
 """
-function build_computation_from_QE(QE_input_path, atom_symbol, psp_path; temperature=1e-4)
-	system = load_system(QE_input_path)
+function build_computation_from_QE(QE_input_path, psp_path;
+				   atom_symbol, functional,
+				   kgrid, Ecut, temperature=1e-4)
+	system = FlexibleSystem(load_system(QE_input_path);
+				boundary_conditions=fill(AtomsBase.Periodic(), 3))
 	system = attach_psp(system, Dict(atom_symbol => psp_path))
 	
 	if functional == "lda"
@@ -24,9 +32,10 @@ end
 		
 """ Run energy computation for using DFTK. 
 """
-function run_DFTK_energy(system, calculator)
+function run_DFTK_scf(; system, calculator)
+	DFTK.reset_timer!(DFTK.timer)
 	energy = AtomsCalculators.potential_energy(system, calculator)
-	(; calculator.state)
+	calculator.state.scfres
 end
 
 function run_DFTK_vc_relax(system, calculator)
@@ -34,20 +43,21 @@ function run_DFTK_vc_relax(system, calculator)
         solver = OptimizationOptimJL.LBFGS(; linesearch)
         optim_options = (; solver, f_tol=1e-10, g_tol=1e-5, iterations=30,
                          show_trace=true, store_trace = true, allow_f_increases=true)
+	DFTK.reset_timer!(DFTK.timer)
         results = minimize_energy!(system, calculator; procedure = "vc_relax", solver, optim_options...)
-        (; results, calculator.state)
+        (; results, calculator.state.scfres)
 end
 
 """ Run a QuantumEspresso computation from a given input file, 
 attaching the specified pseudopotential. 
 """
-function run_QE(QE_input_path, psp_path; k_points, Ecut::Unitful.Energy)
+function run_QE(QE_input_path, psp_path; kgrid, Ecut::Unitful.Energy)
 	Ecut = uconvert(u"Ry", Ecut).val
 	psp_folder, psp_filename = splitdir(psp_path)
 	# Inject correct values for psp and paths. Also inject Ecut and kpoints.
 	regex_psp = """s@\\(.*pseudo_dir = \\)\\(.*\\)\$@\\1"$(psp_folder)"/@g"""
 	
-	regex_kpoints = """s/.*(K_POINTS.*\\n.[^0-9]*)([0-9]*) ([0-9]*) ([0-9]*)(.*)\$/\\1 $(k_points[1]) $(k_points[2]) $(k_points[3])\\5/g"""
+	regex_kpoints = """s/.*(K_POINTS.*\\n.[^0-9]*)([0-9]*) ([0-9]*) ([0-9]*)(.*)\$/\\1 $(kgrid[1]) $(kgrid[2]) $(kgrid[3])\\5/g"""
 	
 	regex_Ecut = """s/(.*ecutwfc.[^0-9]*)(.*)/\\1 $Ecut/g"""
 	

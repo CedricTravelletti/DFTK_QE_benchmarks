@@ -2,7 +2,7 @@ using LazyArtifacts
 
 
 function process_QE_output(QE_output_string; computation="scf")
-	iterations = parse.(Int64, split(
+	scf_iterations = parse.(Int64, split(
 			    read(
 			        pipeline(
 		`echo $QE_output_string`,
@@ -17,6 +17,9 @@ function process_QE_output(QE_output_string; computation="scf")
 	symmetry_metadata = read(pipeline(
 		`echo $QE_output_string`,
 		`sed -n '/Sym\. Ops\./p'`), String)
+	n_symmetries = parse(Int64, read(pipeline(
+		`echo $symmetry_metadata`,
+		`sed -n 's/.[^0-9]*\([0-9]\+\) Sym\. Ops\..*/\1/p'`), String))
 	n_G_vectors = parse.(Int64, split(
 			    read(
 			        pipeline(
@@ -48,5 +51,17 @@ function process_QE_output(QE_output_string; computation="scf")
 			    '\n')[1])
 	else optim_steps = nothing
 	end
-	(; iterations, n_kpoints, optim_steps, symmetry_metadata, n_G_vectors, wall_time)
+	(; scf_iterations, n_kpoints, optim_steps, n_symmetries, symmetry_metadata,
+	 n_G_vectors, wall_time)
+end
+
+function process_DFTK_output(scfres)
+	# We assume the timer has been reset properly before launch.
+	wall_time = DFTK.timer["self_consistent_field"].accumulated_data.time / 1e9
+	scf_iterations = scfres.n_iter
+	n_kpoints = length(scfres.basis.kpoints)
+	n_G_vectors = length(scfres.basis.G_vectors)
+	n_symmetries = length(scfres.basis.symmetries)
+	
+	(; scf_iterations, n_kpoints, n_symmetries, n_G_vectors, wall_time)
 end
