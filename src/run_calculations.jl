@@ -97,3 +97,60 @@ function run_QE(QE_input_path, psp_path; kgrid, Ecut::Unitful.Energy, output_fil
 	end
 	output_stream
 end
+
+""" Run QE vs DFTK comparison on a given system.
+
+Runs both an LDA and a GGA comparison.
+User has to provide a QE input file defining the system, as well as pseudopotential files. 
+Currently, only single element systems are supported, and the user needs to specify the 
+atomic symbol of the element. 
+"""
+function run_system_comparison(QE_input_path, lda_psp_path, gga_psp_path; atom_symbol, kgrid, Ecut)
+	# Name QE output files with as similar name as the input file.
+	outfilename_lda = splitdir(QE_input_path)[2][1:end-3] * ".lda.out"
+	outfilename_gga = splitdir(QE_input_path)[2][1:end-3] * ".gga.out"
+	QE_output_lda = process_QE_output(
+				run_QE(QE_input_path, lda_psp_path;
+				       kgrid, Ecut,
+				       output_file=joinpath(@__DIR__, outfilename_lda)
+				       ))
+	
+	QE_output_gga = process_QE_output(
+				run_QE(QE_input_path, gga_psp_path;
+				       kgrid, Ecut,
+				       output_file=joinpath(@__DIR__, outfilename_gga)
+				       ))
+	
+	# Run with the precise FFT size algorithm to compare number of k-points.
+	DFTK_scfres_lda_fft_precise = run_DFTK_scf(;
+				build_computation_from_QE(
+							  QE_input_path, lda_psp_path;
+							  atom_symbol, functional="lda",
+							  kgrid, Ecut, fft_size_algorithm=:precise)...)
+	DFTK_output_lda_fft_precise = process_DFTK_output(DFTK_scfres_lda_fft_precise)
+	
+	DFTK_scfres_lda = run_DFTK_scf(;
+				build_computation_from_QE(
+							  QE_input_path, lda_psp_path;
+							  atom_symbol, functional="lda",
+							  kgrid, Ecut)...)
+	DFTK_output_lda = process_DFTK_output(DFTK_scfres_lda)
+	
+	
+	DFTK_scfres_gga = run_DFTK_scf(;
+				build_computation_from_QE(
+							  QE_input_path, gga_psp_path;
+							  atom_symbol, functional="gga",
+							  kgrid, Ecut)...)
+	DFTK_output_gga = process_DFTK_output(DFTK_scfres_gga)
+	
+	
+	DFTK_scfres_gga_fft_precise = run_DFTK_scf(;
+				build_computation_from_QE(
+							  QE_input_path, gga_psp_path;
+							  atom_symbol, functional="gga",
+							  kgrid, Ecut, fft_size_algorithm=:precise)...)
+	DFTK_output_gga_fft_precise = process_DFTK_output(DFTK_scfres_gga_fft_precise)
+
+	(; QE_output_lda, QE_output_gga, DFTK_output_lda, DFTK_output_lda_fft_precise, DFTK_output_gga, DFTK_output_gga_fft_precise)
+end
