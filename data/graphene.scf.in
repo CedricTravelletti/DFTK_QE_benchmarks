@@ -1,0 +1,36 @@
+&CONTROL
+    calculation = 'scf'
+    verbosity = 'high'
+    tstress = .true.
+    tprnfor = .true.
+    outdir = './tmp/'
+    prefix = 'graphen_scf'
+    pseudo_dir = './'
+/
+
+&SYSTEM
+    ibrav= 4
+    celldm(1) = 4.6542890
+    celldm(3) = 3.0
+    nat = 2
+    ntyp = 1
+    ecutwfc = 20
+    ecutrho = 200
+    occupations = 'smearing'
+    smearing = 'gaussian'
+    degauss = 0.01,
+/
+
+&ELECTRONS
+    conv_thr = 1.0d-8
+/
+
+ATOMIC_SPECIES
+    C 12.0107 C.pbe-hgh.UPF
+
+ATOMIC_POSITIONS alat
+    C  0.000000  0.000000  0.000000
+    C  0.000000  0.5773503 0.000000
+
+K_POINTS automatic
+    9 9 1 0 0 0
