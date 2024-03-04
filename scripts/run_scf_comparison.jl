@@ -16,7 +16,7 @@ Ecut=50u"Ry"
 out_graphene = run_system_scf_comparison(QE_input_path_graphene, lda_psp_path_graphene, gga_psp_path_graphene; atom_symbol, kgrid, Ecut)
 
 # Silicon
-QE_input_path_Si = joinpath(@__DIR__, "..", "data/si.scf.in")
+QE_input_path_Si = joinpath(@__DIR__, "..", "data/Si.scf.in")
 lda_psp_path_Si = artifact"pd_nc_sr_lda_standard_0.4.1_upf/Si.upf"
 gga_psp_path_Si = artifact"pd_nc_sr_pbe_standard_0.4.1_upf/Si.upf"
 
