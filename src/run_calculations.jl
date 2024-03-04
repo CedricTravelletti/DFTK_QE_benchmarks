@@ -105,7 +105,7 @@ User has to provide a QE input file defining the system, as well as pseudopotent
 Currently, only single element systems are supported, and the user needs to specify the 
 atomic symbol of the element. 
 """
-function run_system_comparison(QE_input_path, lda_psp_path, gga_psp_path; atom_symbol, kgrid, Ecut)
+function run_system_scf_comparison(QE_input_path, lda_psp_path, gga_psp_path; atom_symbol, kgrid, Ecut)
 	# Name QE output files with as similar name as the input file.
 	outfilename_lda = splitdir(QE_input_path)[2][1:end-3] * ".lda.out"
 	outfilename_gga = splitdir(QE_input_path)[2][1:end-3] * ".gga.out"
