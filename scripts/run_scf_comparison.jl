@@ -3,6 +3,7 @@ using LazyArtifacts
 using Unitful
 using UnitfulAtomic
 
+output_folder = joinpath(@__DIR__, "..", "outputs/")
 
 # Graphene
 QE_input_path_graphene = joinpath(@__DIR__, "..", "data/graphene.scf.in")
@@ -13,7 +14,9 @@ atom_symbol = :C
 kgrid=[9, 9, 1]
 Ecut=50u"Ry"
 	
-out_graphene = run_system_scf_comparison(QE_input_path_graphene, lda_psp_path_graphene, gga_psp_path_graphene; atom_symbol, kgrid, Ecut)
+out_graphene = run_system_scf_comparison(QE_input_path_graphene, lda_psp_path_graphene,
+					 gga_psp_path_graphene, output_folder;
+					 atom_symbol, kgrid, Ecut)
 
 # Silicon
 QE_input_path_Si = joinpath(@__DIR__, "..", "data/Si.scf.in")
@@ -24,7 +27,8 @@ atom_symbol = :Si
 kgrid=[6, 6, 6]
 Ecut=50u"Ry"
 
-out_Si = run_system_scf_comparison(QE_input_path_Si, lda_psp_path_Si, gga_psp_path_Si; atom_symbol, kgrid, Ecut)
+out_Si = run_system_scf_comparison(QE_input_path_Si, lda_psp_path_Si, gga_psp_path_Si,
+				   output_folder; atom_symbol, kgrid, Ecut)
 
 # Aluminum
 QE_input_path_Al = joinpath(@__DIR__, "..", "data/Al.scf.in")
@@ -35,4 +39,5 @@ atom_symbol = :Al
 kgrid=[6, 6, 6]
 Ecut=50u"Ry"
 	
-out_Al = run_system_scf_comparison(QE_input_path_Al, lda_psp_path_Al, gga_psp_path_Al; atom_symbol, kgrid, Ecut)
+out_Al = run_system_scf_comparison(QE_input_path_Al, lda_psp_path_Al, gga_psp_path_Al,
+				   output_folder; atom_symbol, kgrid, Ecut)

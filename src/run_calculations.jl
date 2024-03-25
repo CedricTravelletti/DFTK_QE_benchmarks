@@ -41,21 +41,26 @@ end
 """ Run a QuantumEspresso computation from a given input file, 
 attaching the specified pseudopotential. 
 """
-function run_QE(QE_input_path, psp_path; kgrid, Ecut::Unitful.Energy, output_file=nothing)
+function run_QE(QE_input_path, psp_path; kgrid, Ecut::Unitful.Energy, output_file)
 	Ecut = ustrip(u"Ry", Ecut)
 	psp_folder, psp_filename = splitdir(psp_path)
 	# Inject correct values for psp and paths. Also inject Ecut and kpoints.
 	regex_psp = """s@\\(.*pseudo_dir = \\)\\(.*\\)\$@\\1"$(psp_folder)"/@g"""
+	regex_outfile = """s@\\(.*pseudo_dir = \\)\\(.*\\)\$@\\1"$(output_file)"/@g"""
 	
 	regex_kpoints = """s/.*(K_POINTS.*\\n.[^0-9]*)([0-9]*) ([0-9]*) ([0-9]*)(.*)\$/\\1 $(kgrid[1]) $(kgrid[2]) $(kgrid[3])\\5/g"""
 	
 	regex_Ecut = """s/(.*ecutwfc.[^0-9]*)(.*)/\\1 $Ecut/g"""
 	
+	
 	input_stream = read(
 		pipeline(
 		pipeline(
 		pipeline(
+                pipeline(
 		`sed -e "$regex_psp" $QE_input_path`,
+		`perl -0777 -pe "$regex_outfile"`
+		),
 		`perl -0777 -pe "s/.*(ATOMIC_SPECIES.*\n.[^0-9]*[0-9]*\.[0-9]*)(.*)/\1 $psp_filename/g"`
 		),
 		`perl -0777 -pe "$regex_kpoints"`
@@ -64,9 +69,6 @@ function run_QE(QE_input_path, psp_path; kgrid, Ecut::Unitful.Energy, output_fil
 		),
 		String)
 	output_stream = read(pipeline(`echo $input_stream`, `pw.x`), String)
-	if !isnothing(output_file)
-		write(output_file, output_stream)
-	end
 	output_stream
 end
 
@@ -77,20 +79,21 @@ User has to provide a QE input file defining the system, as well as pseudopotent
 Currently, only single element systems are supported, and the user needs to specify the 
 atomic symbol of the element. 
 """
-function run_system_scf_comparison(QE_input_path, lda_psp_path, gga_psp_path; atom_symbol, kgrid, Ecut)
+function run_system_scf_comparison(QE_input_path, lda_psp_path, gga_psp_path, output_folder;
+			           atom_symbol, kgrid, Ecut)
 	# Name QE output files with as similar name as the input file.
 	outfilename_lda = splitdir(QE_input_path)[2][1:end-3] * ".lda.out"
 	outfilename_gga = splitdir(QE_input_path)[2][1:end-3] * ".gga.out"
 	QE_output_lda = process_QE_output(
 				run_QE(QE_input_path, lda_psp_path;
 				       kgrid, Ecut,
-				       output_file=joinpath(@__DIR__, outfilename_lda)
+				       output_file=joinpath(output_folder, outfilename_lda)
 				       ))
 	
 	QE_output_gga = process_QE_output(
 				run_QE(QE_input_path, gga_psp_path;
 				       kgrid, Ecut,
-				       output_file=joinpath(@__DIR__, outfilename_gga)
+				       output_file=joinpath(output_folder, outfilename_gga)
 				       ))
 	
 	# Run with the precise FFT size algorithm to compare number of k-points.
