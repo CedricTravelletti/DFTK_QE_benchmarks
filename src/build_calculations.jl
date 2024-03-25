@@ -42,4 +42,3 @@ function build_computation_from_QE(QE_input_path, psp_path;
 	calculator = DFTKCalculator(; model_kwargs, basis_kwargs, scf_kwargs, verbose=true)
 	(; system, calculator)
 end
-		

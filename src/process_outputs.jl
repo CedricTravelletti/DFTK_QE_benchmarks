@@ -55,13 +55,12 @@ function process_QE_output(QE_output_string; computation="scf")
 	 n_G_vectors, wall_time)
 end
 
-function process_DFTK_output(scfres)
+function process_DFTK_output(output)
 	# We assume the timer has been reset properly before launch.
-	wall_time = DFTK.timer["self_consistent_field"].accumulated_data.time / 1e9
-	scf_iterations = scfres.n_iter
-	n_kpoints = length(scfres.basis.kpoints)
-	n_G_vectors = length(scfres.basis.G_vectors)
-	n_symmetries = length(scfres.basis.symmetries)
+	scf_iterations = output.scfres.n_iter
+	n_kpoints = length(output.scfres.basis.kpoints)
+	n_G_vectors = length(output.scfres.basis.G_vectors)
+	n_symmetries = length(output.scfres.basis.symmetries)
 	
-	(; scf_iterations, n_kpoints, n_symmetries, n_G_vectors, wall_time)
+	(; scf_iterations, n_kpoints, n_symmetries, n_G_vectors, output.timings)
 end

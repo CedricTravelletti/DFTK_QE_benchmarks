@@ -1,3 +1,5 @@
+using MPI
+using TimerOutputs
 using DFTK
 using AtomsCalculators
 using AtomsIO
@@ -7,12 +9,23 @@ using Unitful
 using UnitfulAtomic
 
 
+# Helper function to check whether we are on the master process
+mpi_master(comm=MPI.COMM_WORLD) = (MPI.Init(); MPI.Comm_rank(comm) == 0)
+mpi_nprocs(comm=MPI.COMM_WORLD) = (MPI.Init(); MPI.Comm_size(comm))
+
+
 """ Run energy computation for using DFTK. 
 """
 function run_DFTK_scf(; system, calculator)
 	DFTK.reset_timer!(DFTK.timer)
 	energy = AtomsCalculators.potential_energy(system, calculator)
-	calculator.state.scfres
+	# Dump timings
+    	if mpi_master()
+    	    println(DFTK.timer)
+	    timings = TimerOutputs.todict(DFTK.timer)
+        else timings = nothing
+	end
+	(; calculator.state.scfres, timings)
 end
 
 function run_DFTK_vc_relax(system, calculator)
